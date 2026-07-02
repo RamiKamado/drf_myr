@@ -635,6 +635,10 @@ function search() {
             return m ? m[2] + m[1] : s;
         }
 
+        function isSpecialRZP(rzp) {
+            return SPECIAL_RZP_TYPES.some(t => t.id === rzp.DRm);
+        }
+
         function eoInfoString(eo) {
             infos = [eo.axis];
             if (eo.DRmUD) {
@@ -742,6 +746,9 @@ function search() {
             elRZPNumberNum.textContent = ""+rzpNumber;
 
             let html = `<span class="has-text-weight-bold">${movesString(rzp)}</span> // RZP`;
+            if (isSpecialRZP(rzp)) {
+                html += ` <span class="tag is-warning is-light">Special RZP: ${ecSwap(rzp.DRm)}</span>`;
+            }
             html += ` (${rzpInfoString(rzp)})`;
 
             const n = rzp.normal.length+rzp.inverse.length;
@@ -752,6 +759,9 @@ function search() {
             if (eoListLiForRZP) {
                 const rzpListLi = document.createElement("li");
                 rzpListLi.innerHTML = eoListLiForRZP.innerHTML + " / " + html;
+                if (isSpecialRZP(rzp)) {
+                    rzpListLi.classList.add("has-background-warning-light");
+                }
                 elRZPListContent.appendChild(rzpListLi);
             } else {
                 rzpHiddenNumber++;
@@ -765,6 +775,9 @@ function search() {
 
             const li = document.createElement("li");
             li.innerHTML = html;
+            if (isSpecialRZP(rzp)) {
+                li.classList.add("has-background-warning-light");
+            }
             eo.appendChild(li);
 
             const ul = document.createElement("ul");
@@ -966,7 +979,8 @@ function search() {
                     movesStr = movesString(rzp);
                     n = rzp.normal.length+rzp.inverse.length;
                     diff = rzp.moves-n;
-                    solution += `${movesStr}${movesStr==""?"":" "}// RZP (${rzpInfoString(rzp)}) (${n}${diff!=0?""+diff:""}/${eo.moves+rzp.moves})\n`;
+                    const specialMark = isSpecialRZP(rzp) ? ` [Special RZP: ${ecSwap(rzp.DRm)}]` : "";
+                    solution += `${movesStr}${movesStr==""?"":" "}// RZP${specialMark} (${rzpInfoString(rzp)}) (${n}${diff!=0?""+diff:""}/${eo.moves+rzp.moves})\n`;
                 }
 
                 movesStr = movesString(dr);
