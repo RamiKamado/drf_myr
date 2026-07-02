@@ -1802,10 +1802,11 @@ function getTriggerSpec(rzpDRm) {
     if (rzpDRm == "6e4c") return { n: 3, sameAxis: false, middleHalf: true  };
     if (rzpDRm == "8e7c") return { n: 3, sameAxis: false, middleHalf: false };
     if (rzpDRm == "8e8c") return { n: 2, sameAxis: false };
+    if (rzpDRm == "4e7c") return { n: 4, sameAxis: true };
     return null;
 }
 
-function checkTriggerWindow(win, spec, isValidTrig, isLastAxisQT) {
+function checkTriggerWindow(win, spec, isValidTrig, isLastAxisQT, isDRAxisMove) {
     const n = spec.n;
     if (n == 0) return true;
     if (win.length != n) return false;
@@ -1815,10 +1816,22 @@ function checkTriggerWindow(win, spec, isValidTrig, isLastAxisQT) {
     if (n == 2) {
         return isValidTrig(win[0]) && isValidTrig(win[1]) && win[0][0] != win[1][0];
     }
-    // n == 3
-    const T1 = win[0], M = win[1], T2 = win[2];
-    if (!isValidTrig(T1) || !isValidTrig(T2) || isLastAxisQT(M)) return false;
-    if (spec.middleHalf ? M[M.length-1] != "2" : M[M.length-1] == "2") return false;
+    if (n == 3) {
+        const T1 = win[0], M = win[1], T2 = win[2];
+        if (!isValidTrig(T1) || !isValidTrig(T2) || isLastAxisQT(M)) return false;
+        if (spec.middleHalf ? M[M.length-1] != "2" : M[M.length-1] == "2") return false;
+        return spec.sameAxis ? T1[0] == T2[0] : T1[0] != T2[0];
+    }
+    // n == 4 (例: R U D2 R)
+    // T1, T2 は lastAxis のクォーターターン。中間の2手はどちらも lastAxis ではなく DR軸(rzp.axis)の手で、
+    // 面違い・かつクォーターターン1回とハーフターン1回の組み合わせに限る（順不同）。
+    const T1 = win[0], M1 = win[1], M2 = win[2], T2 = win[3];
+    if (!isValidTrig(T1) || !isValidTrig(T2)) return false;
+    if (isLastAxisQT(M1) || isLastAxisQT(M2)) return false;
+    if (!isDRAxisMove(M1) || !isDRAxisMove(M2)) return false;
+    if (M1[0] == M2[0]) return false;
+    const halfCount = (M1[M1.length-1]=="2"?1:0) + (M2[M2.length-1]=="2"?1:0);
+    if (halfCount != 1) return false;
     return spec.sameAxis ? T1[0] == T2[0] : T1[0] != T2[0];
 }
 
@@ -1905,6 +1918,9 @@ function searchDR(scramble, rzps, maxDepth, niss, maxNum, maxFinishDepth, restri
                     // pre-window と n=3 の中間手 M に使用
                     const isLastAxisQT = m =>
                         (m[0] == lastAxis[0] || m[0] == lastAxis[2]) && m[m.length-1] != "2";
+                    // isDRAxisMove: rzp.axis (DR軸) の手かどうか。n=4 の中間手 M1, M2 に使用
+                    const isDRAxisMove = m =>
+                        m[0] == rzp.axis[0] || m[0] == rzp.axis[2];
                     if (inverse.length == 0) {
                         // f2.normal → dr.normal (rev=false) or dr.inverse (rev=true)
                         const isValidTrig = !rev
@@ -1913,7 +1929,7 @@ function searchDR(scramble, rzps, maxDepth, niss, maxNum, maxFinishDepth, restri
                         const n = spec.n;
                         const preWindow = n > 0 ? normal.slice(0, -n) : normal.slice();
                         triggerOk = !preWindow.some(isLastAxisQT) &&
-                            checkTriggerWindow(n > 0 ? normal.slice(-n) : [], spec, isValidTrig, isLastAxisQT);
+                            checkTriggerWindow(n > 0 ? normal.slice(-n) : [], spec, isValidTrig, isLastAxisQT, isDRAxisMove);
                     } else if (normal.length == 0) {
                         // f1.inverse → dr.inverse (rev=false) or dr.normal (rev=true)
                         const isValidTrig = !rev
@@ -1923,7 +1939,7 @@ function searchDR(scramble, rzps, maxDepth, niss, maxNum, maxFinishDepth, restri
                         const win = inverse.slice(0, n);
                         const preWindow = inverse.slice(n);
                         triggerOk = !preWindow.some(isLastAxisQT) &&
-                            checkTriggerWindow(win, spec, isValidTrig, isLastAxisQT);
+                            checkTriggerWindow(win, spec, isValidTrig, isLastAxisQT, isDRAxisMove);
                     } else {
                         triggerOk = false;
                     }
