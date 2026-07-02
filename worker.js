@@ -1923,18 +1923,16 @@ function searchDR(scramble, rzps, maxDepth, niss, maxNum, maxFinishDepth, restri
                         m[0] == rzp.axis[0] || m[0] == rzp.axis[2];
                     if (inverse.length == 0) {
                         // f2.normal → dr.normal (rev=false) or dr.inverse (rev=true)
-                        const isValidTrig = !rev
-                            ? (m => isLastAxisQT(m) && m[m.length-1] != "'")  // non-primed
-                            : (m => isLastAxisQT(m) && m[m.length-1] == "'"); // primed
+                        // T1, T2 は向き(primeの有無)を問わず、lastAxis のクォーターターンなら許可する。
+                        const isValidTrig = isLastAxisQT;
                         const n = spec.n;
                         const preWindow = n > 0 ? normal.slice(0, -n) : normal.slice();
                         triggerOk = !preWindow.some(isLastAxisQT) &&
                             checkTriggerWindow(n > 0 ? normal.slice(-n) : [], spec, isValidTrig, isLastAxisQT, isDRAxisMove);
                     } else if (normal.length == 0) {
                         // f1.inverse → dr.inverse (rev=false) or dr.normal (rev=true)
-                        const isValidTrig = !rev
-                            ? (m => isLastAxisQT(m) && m[m.length-1] == "'")  // primed
-                            : (m => isLastAxisQT(m) && m[m.length-1] != "'"); // non-primed
+                        // T1, T2 は向き(primeの有無)を問わず、lastAxis のクォーターターンなら許可する。
+                        const isValidTrig = isLastAxisQT;
                         const n = spec.n;
                         const win = inverse.slice(0, n);
                         const preWindow = inverse.slice(n);
