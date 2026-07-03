@@ -1041,6 +1041,7 @@ function search() {
                 let li = bestByEORZPLis.get(eoRzpN);
                 if (!li) {
                     li = document.createElement("li");
+                    li.className = "mb-3";
                     bestByEORZPLis.set(eoRzpN, li);
                     let inserted = false;
                     for (let child of elBestPerEORZPList.children) {
@@ -1055,9 +1056,11 @@ function search() {
                     }
                     li.dataset.eoRzpN = ""+eoRzpN;
                 }
-                li.innerHTML = `EO+RZP <span class="has-text-weight-bold">${eoRzpN}</span>: ` +
+                const summaryHtml = `EO+RZP <span class="has-text-weight-bold">${eoRzpN}</span>: ` +
                     `<span class="has-text-weight-bold">${buildCleanedMoves(eo, rzp, dr, finish)}</span> ` +
                     `(<span class="has-text-weight-bold">${num}</span>)`;
+                li.innerHTML = `<p>${summaryHtml}</p><pre></pre>`;
+                li.querySelector("pre").textContent = buildSolutionText(eo, rzp, dr, finish);
             }
 
             let html = `<span class="has-text-weight-bold">${movesString(finish)}</span> // finish`;
