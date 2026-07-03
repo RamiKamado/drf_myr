@@ -1002,6 +1002,12 @@ function search() {
             return moves.join(" ");
         }
 
+        function qtInfo(dr, finish) {
+            const minQT = parseInt(dr.htrSubset.match(/\d+$/)[0], 10);
+            const actualQT = finish.normal.filter(m => m[m.length-1] != "2").length;
+            return { minQT, actualQT, isOptimal: actualQT <= minQT };
+        }
+
         function buildSolutionText(eo, rzp, dr, finish) {
             let solution = "";
             let movesStr = movesString(eo);
@@ -1024,7 +1030,9 @@ function search() {
             movesStr = movesString(finish);
             n = finish.normal.length;
             diff = finish.moves-n;
-            solution += `${movesStr}${movesStr==""?"":" "}// finish (${n}${diff!=0?""+diff:""}/${eo.moves+rzp.moves+dr.moves+finish.moves})`;
+            const qt = qtInfo(dr, finish);
+            const qtMark = ` [${qt.isOptimal?"op.":"ex."} qt: ${qt.actualQT}/${qt.minQT}]`;
+            solution += `${movesStr}${movesStr==""?"":" "}// finish${qtMark} (${n}${diff!=0?""+diff:""}/${eo.moves+rzp.moves+dr.moves+finish.moves})`;
             return solution;
         }
 
@@ -1093,6 +1101,11 @@ function search() {
                 eo.moves+rzp.moves, "EO+RZP");
 
             let html = `<span class="has-text-weight-bold">${movesString(finish)}</span> // finish`;
+
+            const qt = qtInfo(dr, finish);
+            html += qt.isOptimal
+                ? ` <span class="tag is-success is-light">op. qt</span>`
+                : ` <span class="tag is-warning is-light">ex. qt</span>`;
 
             const n = finish.normal.length;
             html += ` (<span class="has-text-weight-bold">${n}${finish.moves-n!=0?finish.moves-n:""}</span>`;
