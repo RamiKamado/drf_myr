@@ -31,6 +31,7 @@ const elDRMaxNumber = document.getElementById("dr_max_number");
 const elDRNiss = document.getElementById("dr_niss");
 const elRestrictTriggerForm = document.getElementById("restrict_trigger_form");
 const elHideRedundantEO = document.getElementById("hide_redundant_eo");
+const elShowBestPerEO = document.getElementById("show_best_per_eo");
 const elShowBestPerEORZP = document.getElementById("show_best_per_eo_rzp");
 const elFinishMaxDepth = document.getElementById("finish_max_depth");
 const elReset = document.getElementById("reset");
@@ -63,6 +64,8 @@ const elSolution = document.getElementById("solution");
 const elSolutionMoves = document.getElementById("solution_moves");
 const elSolutionMovesNum = document.getElementById("solution_moves_num");
 const elSolutionPre = document.getElementById("solution_pre");
+const elBestPerEO = document.getElementById("best_per_eo");
+const elBestPerEOList = document.getElementById("best_per_eo_list");
 const elBestPerEORZP = document.getElementById("best_per_eo_rzp");
 const elBestPerEORZPList = document.getElementById("best_per_eo_rzp_list");
 const elDRsTitle = document.getElementById("drs_title");
@@ -98,6 +101,7 @@ let config;
             dr_niss: "before",
             restrict_trigger_form: true,
             hide_redundant_eo: true,
+            show_best_per_eo: false,
             show_best_per_eo_rzp: false,
             finish_max_depth: 16,
         };
@@ -116,6 +120,9 @@ let config;
     }
     if (config.hide_redundant_eo === undefined) {
         config.hide_redundant_eo = false;
+    }
+    if (config.show_best_per_eo === undefined) {
+        config.show_best_per_eo = false;
     }
     if (config.show_best_per_eo_rzp === undefined) {
         config.show_best_per_eo_rzp = false;
@@ -183,6 +190,7 @@ elDRMaxNumber.value = ""+config.dr_max_number;
 elDRNiss.value = config.dr_niss;
 elRestrictTriggerForm.checked = config.restrict_trigger_form;
 elHideRedundantEO.checked = config.hide_redundant_eo;
+elShowBestPerEO.checked = config.show_best_per_eo;
 elShowBestPerEORZP.checked = config.show_best_per_eo_rzp;
 
 for (let i=0; i<=18; i++) {
@@ -347,6 +355,7 @@ function search() {
     drNiss = elDRNiss.value,
     restrictTriggerForm = elRestrictTriggerForm.checked,
     hideRedundantEO = elHideRedundantEO.checked,
+    showBestPerEO = elShowBestPerEO.checked,
     showBestPerEORZP = elShowBestPerEORZP.checked,
     finishMaxDepth = +elFinishMaxDepth.value,
 
@@ -365,6 +374,7 @@ function search() {
         dr_niss: drNiss,
         restrict_trigger_form: restrictTriggerForm,
         hide_redundant_eo: hideRedundantEO,
+        show_best_per_eo: showBestPerEO,
         show_best_per_eo_rzp: showBestPerEORZP,
         finish_max_depth: finishMaxDepth,
     }));
@@ -591,6 +601,8 @@ function search() {
     elDRNumber.style.display = "none";
     elSolution.style.display = "none";
     elSolutionPre.style.display = "none";
+    elBestPerEO.style.display = "none";
+    while (elBestPerEOList.firstChild) elBestPerEOList.removeChild(elBestPerEOList.lastChild);
     elBestPerEORZP.style.display = "none";
     while (elBestPerEORZPList.firstChild) elBestPerEORZPList.removeChild(elBestPerEORZPList.lastChild);
 
@@ -617,6 +629,8 @@ function search() {
     let specialRZPElements = new Map();
     let bestByEORZP = new Map();
     let bestByEORZPLis = new Map();
+    let bestByEO = new Map();
+    let bestByEOLis = new Map();
 
     while (elDRs.firstChild) {
         elDRs.removeChild(elDRs.lastChild);
@@ -1033,35 +1047,41 @@ function search() {
                 elSolutionPre.textContent = buildSolutionText(eo, rzp, dr, finish);
             }
 
-            const eoRzpN = eo.moves+rzp.moves;
-            if (!bestByEORZP.has(eoRzpN) || num < bestByEORZP.get(eoRzpN)) {
-                bestByEORZP.set(eoRzpN, num);
-                elBestPerEORZP.style.display = elShowBestPerEORZP.checked ? "block" : "none";
+            function updateBestByDepth(map, lis, container, list, checkbox, depthKey, depthLabel) {
+                if (!map.has(depthKey) || num < map.get(depthKey)) {
+                    map.set(depthKey, num);
+                    container.style.display = checkbox.checked ? "block" : "none";
 
-                let li = bestByEORZPLis.get(eoRzpN);
-                if (!li) {
-                    li = document.createElement("li");
-                    li.className = "mb-3";
-                    bestByEORZPLis.set(eoRzpN, li);
-                    let inserted = false;
-                    for (let child of elBestPerEORZPList.children) {
-                        if (+child.dataset.eoRzpN > eoRzpN) {
-                            elBestPerEORZPList.insertBefore(li, child);
-                            inserted = true;
-                            break;
+                    let li = lis.get(depthKey);
+                    if (!li) {
+                        li = document.createElement("li");
+                        li.className = "mb-3";
+                        lis.set(depthKey, li);
+                        let inserted = false;
+                        for (let child of list.children) {
+                            if (+child.dataset.depthKey > depthKey) {
+                                list.insertBefore(li, child);
+                                inserted = true;
+                                break;
+                            }
                         }
+                        if (!inserted) {
+                            list.appendChild(li);
+                        }
+                        li.dataset.depthKey = ""+depthKey;
                     }
-                    if (!inserted) {
-                        elBestPerEORZPList.appendChild(li);
-                    }
-                    li.dataset.eoRzpN = ""+eoRzpN;
+                    const summaryHtml = `${depthLabel} <span class="has-text-weight-bold">${depthKey}</span>: ` +
+                        `<span class="has-text-weight-bold">${buildCleanedMoves(eo, rzp, dr, finish)}</span> ` +
+                        `(<span class="has-text-weight-bold">${num}</span>)`;
+                    li.innerHTML = `<p>${summaryHtml}</p><pre></pre>`;
+                    li.querySelector("pre").textContent = buildSolutionText(eo, rzp, dr, finish);
                 }
-                const summaryHtml = `EO+RZP <span class="has-text-weight-bold">${eoRzpN}</span>: ` +
-                    `<span class="has-text-weight-bold">${buildCleanedMoves(eo, rzp, dr, finish)}</span> ` +
-                    `(<span class="has-text-weight-bold">${num}</span>)`;
-                li.innerHTML = `<p>${summaryHtml}</p><pre></pre>`;
-                li.querySelector("pre").textContent = buildSolutionText(eo, rzp, dr, finish);
             }
+
+            updateBestByDepth(bestByEO, bestByEOLis, elBestPerEO, elBestPerEOList, elShowBestPerEO,
+                eo.moves, "EO");
+            updateBestByDepth(bestByEORZP, bestByEORZPLis, elBestPerEORZP, elBestPerEORZPList, elShowBestPerEORZP,
+                eo.moves+rzp.moves, "EO+RZP");
 
             let html = `<span class="has-text-weight-bold">${movesString(finish)}</span> // finish`;
 
@@ -1138,6 +1158,10 @@ elRZPUse.addEventListener("input", () => {
     elRZP.style.display = elRZPUse.checked?"block":"none";
 });
 
+elShowBestPerEO.addEventListener("input", () => {
+    elBestPerEO.style.display = (elShowBestPerEO.checked && elBestPerEOList.children.length>0) ? "block" : "none";
+});
+
 elShowBestPerEORZP.addEventListener("input", () => {
     elBestPerEORZP.style.display = (elShowBestPerEORZP.checked && elBestPerEORZPList.children.length>0) ? "block" : "none";
 });
@@ -1159,6 +1183,7 @@ elReset.addEventListener("click", () => {
     elDRNiss.value = "before";
     elRestrictTriggerForm.checked = true;
     elHideRedundantEO.checked = true;
+    elShowBestPerEO.checked = false;
     elShowBestPerEORZP.checked = false;
     elFinishMaxDepth.value = "16";
 

@@ -332,6 +332,21 @@
             </div>
             <div class="field is-horizontal">
               <div class="field-label is-normal">
+                <label class="label">Best per EO</label>
+              </div>
+              <div class="field-body">
+                <div class="field">
+                  <div class="control">
+                    <label class="checkbox">
+                      <input type="checkbox" id="show_best_per_eo">
+                      Show Best Solutions of each EO
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="field is-horizontal">
+              <div class="field-label is-normal">
                 <label class="label">Best per EO+RZP</label>
               </div>
               <div class="field-body">
@@ -465,6 +480,10 @@
           Best solution: <span id="solution_moves" class="has-text-weight-bold"></span> (<span id="solution_moves_num" class="has-text-weight-bold"></span>)
         </p>
         <pre id="solution_pre" style="display: none"></pre>
+        <div id="best_per_eo" style="display: none">
+          <p class="has-text-weight-bold">Best Solutions of each EO:</p>
+          <ul id="best_per_eo_list"></ul>
+        </div>
         <div id="best_per_eo_rzp" style="display: none">
           <p class="has-text-weight-bold">Best Solutions of each EO+RZP:</p>
           <ul id="best_per_eo_rzp_list"></ul>
