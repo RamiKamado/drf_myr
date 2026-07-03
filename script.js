@@ -593,6 +593,7 @@ function search() {
     let drIdToEntry = new Map();
     let drFinishTotal = new Map();
     let best = 9999;
+    let specialRZPElements = new Map();
 
     while (elDRs.firstChild) {
         elDRs.removeChild(elDRs.lastChild);
@@ -757,12 +758,10 @@ function search() {
             html += `/<span class="has-text-weight-bold">${rzp.moves+rzp.eo.moves}</span>)`;
 
             const eoListLiForRZP = elEOListContent.querySelector(`[data-eo-id="${rzp.eo.id}"]`);
+            let rzpListLi = null;
             if (eoListLiForRZP) {
-                const rzpListLi = document.createElement("li");
+                rzpListLi = document.createElement("li");
                 rzpListLi.innerHTML = eoListLiForRZP.innerHTML + " / " + html;
-                if (isSpecialRZP(rzp)) {
-                    rzpListLi.classList.add("has-background-warning-light");
-                }
                 elRZPListContent.appendChild(rzpListLi);
             } else {
                 rzpHiddenNumber++;
@@ -776,10 +775,11 @@ function search() {
 
             const li = document.createElement("li");
             li.innerHTML = html;
-            if (isSpecialRZP(rzp)) {
-                li.classList.add("has-background-warning-light");
-            }
             eo.appendChild(li);
+
+            if (isSpecialRZP(rzp)) {
+                specialRZPElements.set(rzp.id, { li, rzpListLi });
+            }
 
             const ul = document.createElement("ul");
             ul.id = "rzp_"+rzp.id;
@@ -833,6 +833,14 @@ function search() {
             const parentId = dr.rzp.skip ? "eo_"+dr.rzp.eo.id : "rzp_"+dr.rzp.id;
             const parent = document.getElementById(parentId);
             parent.style.display = "block";
+
+            if (!dr.rzp.skip && specialRZPElements.has(dr.rzp.id)) {
+                const { li, rzpListLi } = specialRZPElements.get(dr.rzp.id);
+                li.classList.add("has-background-warning-light");
+                if (rzpListLi) {
+                    rzpListLi.classList.add("has-background-warning-light");
+                }
+            }
 
             const side = dr.inverse.length > 0 ? "inverse" : "normal";
             const groupKey = dr.axis + "_" + side;
