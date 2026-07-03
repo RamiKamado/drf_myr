@@ -1487,7 +1487,8 @@ function searchRZP(scramble, eos, maxDepth, niss, maxNum, specialRZPTypes = []) 
                      specialRZPTypes.includes("6e4c") && cube.drBadEdge(axis)==6 && cube.drBadCorner(axis)==4 ||
                      specialRZPTypes.includes("8e7c") && cube.drBadEdge(axis)==8 && cube.drBadCorner(axis)==7 ||
                      specialRZPTypes.includes("8e8c") && cube.drBadEdge(axis)==8 && cube.drBadCorner(axis)==8 ||
-                     specialRZPTypes.includes("4e7c") && cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==7)) {
+                     specialRZPTypes.includes("4e7c") && cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==7 ||
+                     specialRZPTypes.includes("6e3c") && cube.drBadEdge(axis)==6 && cube.drBadCorner(axis)==3)) {
                         const rzp = !rev ?
                             new RZP(scramble, eo, axis, normal, reverse(inverse), false) :
                             new RZP(scramble, eo, axis, reverse(inverse), normal, false);
@@ -1803,6 +1804,7 @@ function getTriggerSpec(rzpDRm) {
     if (rzpDRm == "8e7c") return { n: 3, sameAxis: false, middleHalf: false };
     if (rzpDRm == "8e8c") return { n: 2, sameAxis: false };
     if (rzpDRm == "4e7c") return { n: 4, sameAxis: true };
+    if (rzpDRm == "6e3c") return { n: 4, sameAxis: false };
     return null;
 }
 

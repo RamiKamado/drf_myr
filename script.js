@@ -7,6 +7,7 @@ const SPECIAL_RZP_TYPES = [
     { id: "8e7c", label: "8e7c: R U L" },
     { id: "8e8c", label: "8e8c: R L" },
     { id: "4e7c", label: "4e7c: R U D2 R" },
+    { id: "6e3c", label: "6e3c: R U D2 L" },
 ];
 const elSpecialRZP = {};
 for (const t of SPECIAL_RZP_TYPES) {
