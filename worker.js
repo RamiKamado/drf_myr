@@ -1488,7 +1488,9 @@ function searchRZP(scramble, eos, maxDepth, niss, maxNum, specialRZPTypes = []) 
                      specialRZPTypes.includes("8e7c") && cube.drBadEdge(axis)==8 && cube.drBadCorner(axis)==7 ||
                      specialRZPTypes.includes("8e8c") && cube.drBadEdge(axis)==8 && cube.drBadCorner(axis)==8 ||
                      specialRZPTypes.includes("4e7c") && cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==7 ||
-                     specialRZPTypes.includes("6e3c") && cube.drBadEdge(axis)==6 && cube.drBadCorner(axis)==3)) {
+                     specialRZPTypes.includes("6e3c") && cube.drBadEdge(axis)==6 && cube.drBadCorner(axis)==3 ||
+                     specialRZPTypes.includes("4e5c") && cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==5 ||
+                     specialRZPTypes.includes("4e6c") && cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==6)) {
                         const rzp = !rev ?
                             new RZP(scramble, eo, axis, normal, reverse(inverse), false) :
                             new RZP(scramble, eo, axis, reverse(inverse), normal, false);
@@ -1803,12 +1805,15 @@ function getTriggerSpec(rzpDRm) {
     if (rzpDRm == "6e4c") return { n: 3, sameAxis: false, middleHalf: true  };
     if (rzpDRm == "8e7c") return { n: 3, sameAxis: false, middleHalf: false };
     if (rzpDRm == "8e8c") return { n: 2, sameAxis: false };
-    if (rzpDRm == "4e7c") return { n: 4, sameAxis: true };
-    if (rzpDRm == "6e3c") return { n: 4, sameAxis: false };
+    // n==4系: 中間2手の種類 (dr-qt / dr-ht / eo-ht) の組み合わせで区別する
+    if (rzpDRm == "4e7c") return { n: 4, sameAxis: true,  middleKinds: ["dr-qt", "dr-ht"] };
+    if (rzpDRm == "6e3c") return { n: 4, sameAxis: false, middleKinds: ["dr-qt", "dr-ht"] };
+    if (rzpDRm == "4e5c") return { n: 4, sameAxis: true,  middleKinds: ["dr-qt", "eo-ht"] };
+    if (rzpDRm == "4e6c") return { n: 4, sameAxis: true,  middleKinds: ["dr-qt", "dr-qt"] };
     return null;
 }
 
-function checkTriggerWindow(win, spec, isValidTrig, isLastAxisQT, isDRAxisMove) {
+function checkTriggerWindow(win, spec, isValidTrig, isLastAxisQT, classifyMiddleMove) {
     const n = spec.n;
     if (n == 0) return true;
     if (win.length != n) return false;
@@ -1824,16 +1829,19 @@ function checkTriggerWindow(win, spec, isValidTrig, isLastAxisQT, isDRAxisMove) 
         if (spec.middleHalf ? M[M.length-1] != "2" : M[M.length-1] == "2") return false;
         return spec.sameAxis ? T1[0] == T2[0] : T1[0] != T2[0];
     }
-    // n == 4 (例: R U D2 R)
-    // T1, T2 は lastAxis のクォーターターン。中間の2手はどちらも lastAxis ではなく DR軸(rzp.axis)の手で、
-    // 面違い・かつクォーターターン1回とハーフターン1回の組み合わせに限る（順不同）。
+    // n == 4 (例: R U D2 R / R U F2 R / R U D R)
+    // T1, T2 は lastAxis のクォーターターン。中間の2手は面違いで、
+    // spec.middleKinds で指定された種類（dr軸/eo軸 × クォーターターン/ハーフターン）の組み合わせに限る（順不同）。
     const T1 = win[0], M1 = win[1], M2 = win[2], T2 = win[3];
     if (!isValidTrig(T1) || !isValidTrig(T2)) return false;
     if (isLastAxisQT(M1) || isLastAxisQT(M2)) return false;
-    if (!isDRAxisMove(M1) || !isDRAxisMove(M2)) return false;
     if (M1[0] == M2[0]) return false;
-    const halfCount = (M1[M1.length-1]=="2"?1:0) + (M2[M2.length-1]=="2"?1:0);
-    if (halfCount != 1) return false;
+    const c1 = classifyMiddleMove(M1);
+    const c2 = classifyMiddleMove(M2);
+    if (!c1 || !c2) return false;
+    const got = [c1, c2].sort();
+    const need = spec.middleKinds.slice().sort();
+    if (got[0] != need[0] || got[1] != need[1]) return false;
     return spec.sameAxis ? T1[0] == T2[0] : T1[0] != T2[0];
 }
 
@@ -1920,9 +1928,14 @@ function searchDR(scramble, rzps, maxDepth, niss, maxNum, maxFinishDepth, restri
                     // pre-window と n=3 の中間手 M に使用
                     const isLastAxisQT = m =>
                         (m[0] == lastAxis[0] || m[0] == lastAxis[2]) && m[m.length-1] != "2";
-                    // isDRAxisMove: rzp.axis (DR軸) の手かどうか。n=4 の中間手 M1, M2 に使用
-                    const isDRAxisMove = m =>
-                        m[0] == rzp.axis[0] || m[0] == rzp.axis[2];
+                    // classifyMiddleMove: n=4 の中間手 M1, M2 を "dr-qt" / "dr-ht" / "eo-qt" / "eo-ht" に分類。
+                    // lastAxis の手（isLastAxisQTで既に除外されるQT以外にハーフターンも含む）は null（対象外）。
+                    const classifyMiddleMove = m => {
+                        const half = m[m.length-1] == "2";
+                        if (m[0] == rzp.axis[0] || m[0] == rzp.axis[2]) return half ? "dr-ht" : "dr-qt";
+                        if (m[0] == rzp.eo.axis[0] || m[0] == rzp.eo.axis[2]) return half ? "eo-ht" : "eo-qt";
+                        return null;
+                    };
                     if (inverse.length == 0) {
                         // f2.normal → dr.normal (rev=false) or dr.inverse (rev=true)
                         // T1, T2 は向き(primeの有無)を問わず、lastAxis のクォーターターンなら許可する。
@@ -1930,7 +1943,7 @@ function searchDR(scramble, rzps, maxDepth, niss, maxNum, maxFinishDepth, restri
                         const n = spec.n;
                         const preWindow = n > 0 ? normal.slice(0, -n) : normal.slice();
                         triggerOk = !preWindow.some(isLastAxisQT) &&
-                            checkTriggerWindow(n > 0 ? normal.slice(-n) : [], spec, isValidTrig, isLastAxisQT, isDRAxisMove);
+                            checkTriggerWindow(n > 0 ? normal.slice(-n) : [], spec, isValidTrig, isLastAxisQT, classifyMiddleMove);
                     } else if (normal.length == 0) {
                         // f1.inverse → dr.inverse (rev=false) or dr.normal (rev=true)
                         // T1, T2 は向き(primeの有無)を問わず、lastAxis のクォーターターンなら許可する。
@@ -1939,7 +1952,7 @@ function searchDR(scramble, rzps, maxDepth, niss, maxNum, maxFinishDepth, restri
                         const win = inverse.slice(0, n);
                         const preWindow = inverse.slice(n);
                         triggerOk = !preWindow.some(isLastAxisQT) &&
-                            checkTriggerWindow(win, spec, isValidTrig, isLastAxisQT, isDRAxisMove);
+                            checkTriggerWindow(win, spec, isValidTrig, isLastAxisQT, classifyMiddleMove);
                     } else {
                         triggerOk = false;
                     }
