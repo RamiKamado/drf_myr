@@ -31,6 +31,7 @@ const elDRMaxNumber = document.getElementById("dr_max_number");
 const elDRNiss = document.getElementById("dr_niss");
 const elRestrictTriggerForm = document.getElementById("restrict_trigger_form");
 const elHideRedundantEO = document.getElementById("hide_redundant_eo");
+const elShowBestPerEORZP = document.getElementById("show_best_per_eo_rzp");
 const elFinishMaxDepth = document.getElementById("finish_max_depth");
 const elReset = document.getElementById("reset");
 const elRandom = document.getElementById("random");
@@ -62,6 +63,8 @@ const elSolution = document.getElementById("solution");
 const elSolutionMoves = document.getElementById("solution_moves");
 const elSolutionMovesNum = document.getElementById("solution_moves_num");
 const elSolutionPre = document.getElementById("solution_pre");
+const elBestPerEORZP = document.getElementById("best_per_eo_rzp");
+const elBestPerEORZPList = document.getElementById("best_per_eo_rzp_list");
 const elDRsTitle = document.getElementById("drs_title");
 const elDRs = document.getElementById("drs");
 const elEOListDetails = document.getElementById("eo_list_details");
@@ -95,6 +98,7 @@ let config;
             dr_niss: "before",
             restrict_trigger_form: true,
             hide_redundant_eo: true,
+            show_best_per_eo_rzp: false,
             finish_max_depth: 16,
         };
     }
@@ -112,6 +116,9 @@ let config;
     }
     if (config.hide_redundant_eo === undefined) {
         config.hide_redundant_eo = false;
+    }
+    if (config.show_best_per_eo_rzp === undefined) {
+        config.show_best_per_eo_rzp = false;
     }
 }
 
@@ -176,6 +183,7 @@ elDRMaxNumber.value = ""+config.dr_max_number;
 elDRNiss.value = config.dr_niss;
 elRestrictTriggerForm.checked = config.restrict_trigger_form;
 elHideRedundantEO.checked = config.hide_redundant_eo;
+elShowBestPerEORZP.checked = config.show_best_per_eo_rzp;
 
 for (let i=0; i<=18; i++) {
     const o = document.createElement("option");
@@ -339,6 +347,7 @@ function search() {
     drNiss = elDRNiss.value,
     restrictTriggerForm = elRestrictTriggerForm.checked,
     hideRedundantEO = elHideRedundantEO.checked,
+    showBestPerEORZP = elShowBestPerEORZP.checked,
     finishMaxDepth = +elFinishMaxDepth.value,
 
     localStorage.setItem("dr_finder", JSON.stringify({
@@ -356,6 +365,7 @@ function search() {
         dr_niss: drNiss,
         restrict_trigger_form: restrictTriggerForm,
         hide_redundant_eo: hideRedundantEO,
+        show_best_per_eo_rzp: showBestPerEORZP,
         finish_max_depth: finishMaxDepth,
     }));
 
@@ -581,6 +591,8 @@ function search() {
     elDRNumber.style.display = "none";
     elSolution.style.display = "none";
     elSolutionPre.style.display = "none";
+    elBestPerEORZP.style.display = "none";
+    while (elBestPerEORZPList.firstChild) elBestPerEORZPList.removeChild(elBestPerEORZPList.lastChild);
 
     let eoNumber = 0;
     let eoHiddenNumber = 0;
@@ -603,6 +615,8 @@ function search() {
     let drFinishTotal = new Map();
     let best = 9999;
     let specialRZPElements = new Map();
+    let bestByEORZP = new Map();
+    let bestByEORZPLis = new Map();
 
     while (elDRs.firstChild) {
         elDRs.removeChild(elDRs.lastChild);
@@ -916,6 +930,81 @@ function search() {
                 summary.textContent = `+${popupUl.children.length} more (${dr.htrSubset}${bestStr})`;
             }
         }
+        function buildCleanedMoves(eo, rzp, dr, finish) {
+            const moves = [];
+            function add(m) {
+                if (moves.length>0) {
+                    if (moves[moves.length-1][0]=="B" && m[0]=="F" ||
+                        moves[moves.length-1][0]=="L" && m[0]=="R" ||
+                        moves[moves.length-1][0]=="D" && m[0]=="U") {
+                        const t = moves.pop();
+                        moves.push(m);
+                        m = t;
+                    }
+
+                    if (moves[moves.length-1][0]==m[0]) {
+                        const t = moves.pop();
+                        const n = ({"": 1, "2": 2, "'": 3}[t.substring(1)]+{"": 1, "2": 2, "'": 3}[m.substring(1)])%4;
+                        if (n>0) {
+                            moves.push(m[0]+["", "", "2", "'"][n]);
+                        }
+                    } else {
+                        moves.push(m);
+                    }
+                } else {
+                    moves.push(m);
+                }
+            }
+            for (let m of eo.normal) {
+                add(m);
+            }
+            for (let m of rzp.normal) {
+                add(m);
+            }
+            for (let m of dr.normal) {
+                add(m);
+            }
+            for (let m of finish.normal) {
+                add(m);
+            }
+            for (let m of reverse(dr.inverse)) {
+                add(m);
+            }
+            for (let m of reverse(rzp.inverse)) {
+                add(m);
+            }
+            for (let m of reverse(eo.inverse)) {
+                add(m);
+            }
+            return moves.join(" ");
+        }
+
+        function buildSolutionText(eo, rzp, dr, finish) {
+            let solution = "";
+            let movesStr = movesString(eo);
+            let n = eo.normal.length+eo.inverse.length;
+            solution += `${movesStr}${movesStr==""?"":" "}// EO (${eoInfoString(eo)}) (${n}/${eo.moves})\n`;
+
+            if (!rzp.skip) {
+                movesStr = movesString(rzp);
+                n = rzp.normal.length+rzp.inverse.length;
+                let diff = rzp.moves-n;
+                const specialMark = isSpecialRZP(rzp) ? ` [Special RZP: ${ecSwap(rzp.DRm)}]` : "";
+                solution += `${movesStr}${movesStr==""?"":" "}// RZP${specialMark} (${rzpInfoString(rzp)}) (${n}${diff!=0?""+diff:""}/${eo.moves+rzp.moves})\n`;
+            }
+
+            movesStr = movesString(dr);
+            n = dr.normal.length+dr.inverse.length;
+            let diff = dr.moves-n;
+            solution += `${movesStr}${movesStr==""?"":" "}// DR (${drInfoString(dr)}) (${n}${diff!=0?""+diff:""}/${eo.moves+rzp.moves+dr.moves})\n`;
+
+            movesStr = movesString(finish);
+            n = finish.normal.length;
+            diff = finish.moves-n;
+            solution += `${movesStr}${movesStr==""?"":" "}// finish (${n}${diff!=0?""+diff:""}/${eo.moves+rzp.moves+dr.moves+finish.moves})`;
+            return solution;
+        }
+
         if (data.type=="finish") {
             const finish = data.finish;
             const dr = finish.dr;
@@ -938,80 +1027,37 @@ function search() {
             if (num<best) {
                 best = num;
                 elSolution.style.display = "block";
-
-                const moves = [];
-                function add(m) {
-                    if (moves.length>0) {
-                        if (moves[moves.length-1][0]=="B" && m[0]=="F" ||
-                            moves[moves.length-1][0]=="L" && m[0]=="R" ||
-                            moves[moves.length-1][0]=="D" && m[0]=="U") {
-                            const t = moves.pop();
-                            moves.push(m);
-                            m = t;
-                        }
-
-                        if (moves[moves.length-1][0]==m[0]) {
-                            const t = moves.pop();
-                            const n = ({"": 1, "2": 2, "'": 3}[t.substring(1)]+{"": 1, "2": 2, "'": 3}[m.substring(1)])%4;
-                            if (n>0) {
-                                moves.push(m[0]+["", "", "2", "'"][n]);
-                            }
-                        } else {
-                            moves.push(m);
-                        }
-                    } else {
-                        moves.push(m);
-                    }
-                }
-                for (let m of eo.normal) {
-                    add(m);
-                }
-                for (let m of rzp.normal) {
-                    add(m);
-                }
-                for (let m of dr.normal) {
-                    add(m);
-                }
-                for (let m of finish.normal) {
-                    add(m);
-                }
-                for (let m of reverse(dr.inverse)) {
-                    add(m);
-                }
-                for (let m of reverse(rzp.inverse)) {
-                    add(m);
-                }
-                for (let m of reverse(eo.inverse)) {
-                    add(m);
-                }
-                elSolutionMoves.textContent = moves.join(" ");
-
+                elSolutionMoves.textContent = buildCleanedMoves(eo, rzp, dr, finish);
                 elSolutionMovesNum.textContent = ""+num;
-
-                let solution = "";
-                let movesStr = movesString(eo);
-                let n = eo.normal.length+eo.inverse.length;
-                solution += `${movesStr}${movesStr==""?"":" "}// EO (${eoInfoString(eo)}) (${n}/${eo.moves})\n`;
-
-                if (!rzp.skip) {
-                    movesStr = movesString(rzp);
-                    n = rzp.normal.length+rzp.inverse.length;
-                    diff = rzp.moves-n;
-                    const specialMark = isSpecialRZP(rzp) ? ` [Special RZP: ${ecSwap(rzp.DRm)}]` : "";
-                    solution += `${movesStr}${movesStr==""?"":" "}// RZP${specialMark} (${rzpInfoString(rzp)}) (${n}${diff!=0?""+diff:""}/${eo.moves+rzp.moves})\n`;
-                }
-
-                movesStr = movesString(dr);
-                n = dr.normal.length+dr.inverse.length;
-                diff = dr.moves-n;
-                solution += `${movesStr}${movesStr==""?"":" "}// DR (${drInfoString(dr)}) (${n}${diff!=0?""+diff:""}/${eo.moves+rzp.moves+dr.moves})\n`;
-
-                movesStr = movesString(finish);
-                n = finish.normal.length;
-                diff = finish.moves-n;
-                solution += `${movesStr}${movesStr==""?"":" "}// finish (${n}${diff!=0?""+diff:""}/${eo.moves+rzp.moves+dr.moves+finish.moves})`;
                 elSolutionPre.style.display = "block";
-                elSolutionPre.textContent = solution;
+                elSolutionPre.textContent = buildSolutionText(eo, rzp, dr, finish);
+            }
+
+            const eoRzpN = eo.moves+rzp.moves;
+            if (!bestByEORZP.has(eoRzpN) || num < bestByEORZP.get(eoRzpN)) {
+                bestByEORZP.set(eoRzpN, num);
+                elBestPerEORZP.style.display = elShowBestPerEORZP.checked ? "block" : "none";
+
+                let li = bestByEORZPLis.get(eoRzpN);
+                if (!li) {
+                    li = document.createElement("li");
+                    bestByEORZPLis.set(eoRzpN, li);
+                    let inserted = false;
+                    for (let child of elBestPerEORZPList.children) {
+                        if (+child.dataset.eoRzpN > eoRzpN) {
+                            elBestPerEORZPList.insertBefore(li, child);
+                            inserted = true;
+                            break;
+                        }
+                    }
+                    if (!inserted) {
+                        elBestPerEORZPList.appendChild(li);
+                    }
+                    li.dataset.eoRzpN = ""+eoRzpN;
+                }
+                li.innerHTML = `EO+RZP <span class="has-text-weight-bold">${eoRzpN}</span>: ` +
+                    `<span class="has-text-weight-bold">${buildCleanedMoves(eo, rzp, dr, finish)}</span> ` +
+                    `(<span class="has-text-weight-bold">${num}</span>)`;
             }
 
             let html = `<span class="has-text-weight-bold">${movesString(finish)}</span> // finish`;
@@ -1089,6 +1135,10 @@ elRZPUse.addEventListener("input", () => {
     elRZP.style.display = elRZPUse.checked?"block":"none";
 });
 
+elShowBestPerEORZP.addEventListener("input", () => {
+    elBestPerEORZP.style.display = (elShowBestPerEORZP.checked && elBestPerEORZPList.children.length>0) ? "block" : "none";
+});
+
 elReset.addEventListener("click", () => {
     elEOMaxDepth.value = "5";
     elEOMaxNumber.value = "256";
@@ -1106,6 +1156,7 @@ elReset.addEventListener("click", () => {
     elDRNiss.value = "before";
     elRestrictTriggerForm.checked = true;
     elHideRedundantEO.checked = true;
+    elShowBestPerEORZP.checked = false;
     elFinishMaxDepth.value = "16";
 
     search();
