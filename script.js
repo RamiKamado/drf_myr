@@ -3,14 +3,21 @@ const elEOMaxNumber = document.getElementById("eo_max_number");
 const elEONiss = document.getElementById("eo_niss");
 const elRZPUse = document.getElementById("rzp_use");
 const SPECIAL_RZP_TYPES = [
-    { id: "6e4c", label: "6e4c: R U2 L" },
-    { id: "8e7c", label: "8e7c: R U L" },
-    { id: "8e8c", label: "8e8c: R L" },
-    { id: "4e7c", label: "4e7c: R U D2 R" },
-    { id: "6e3c", label: "6e3c: R U D2 L" },
-    { id: "4e5c", label: "4e5c: R U F2 R / R U' F2 R / R F2 U R / R F2 U' R" },
-    { id: "4e6c", label: "4e6c: R U D R / R U' D R" },
+    { id: "6e4c",   drmClass: "6e4c", label: "6e4c: R U2 L" },
+    { id: "8e7c",   drmClass: "8e7c", label: "8e7c: R U L" },
+    { id: "8e8c",   drmClass: "8e8c", label: "8e8c: R L" },
+    { id: "4e7c",   drmClass: "4e7c", label: "4e7c: R U D2 R" },
+    { id: "6e3c",   drmClass: "6e3c", label: "6e3c: R U D2 L" },
+    { id: "4e5c_1", drmClass: "4e5c", label: "4e5c: R U F2 R" },
+    { id: "4e5c_2", drmClass: "4e5c", label: "4e5c: R U' F2 R" },
+    { id: "4e5c_3", drmClass: "4e5c", label: "4e5c: R F2 U R" },
+    { id: "4e5c_4", drmClass: "4e5c", label: "4e5c: R F2 U' R" },
+    { id: "4e6c_1", drmClass: "4e6c", label: "4e6c: R U D R" },
+    { id: "4e6c_2", drmClass: "4e6c", label: "4e6c: R U' D R" },
 ];
+// isSpecialRZP() でのバッジ/塗りつぶし判定に使う。チェックボックスID(サブバリエーション)ではなく
+// badEdge/badCorner分類(rzp.DRm)そのものの一覧。
+const SPECIAL_RZP_DRM_CLASSES = new Set(SPECIAL_RZP_TYPES.map(t => t.drmClass));
 const elSpecialRZP = {};
 for (const t of SPECIAL_RZP_TYPES) {
     elSpecialRZP[t.id] = document.getElementById("special_rzp_"+t.id);
@@ -640,7 +647,7 @@ function search() {
         }
 
         function isSpecialRZP(rzp) {
-            return SPECIAL_RZP_TYPES.some(t => t.id === rzp.DRm);
+            return SPECIAL_RZP_DRM_CLASSES.has(rzp.DRm);
         }
 
         function eoInfoString(eo) {

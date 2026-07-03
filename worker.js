@@ -1489,8 +1489,11 @@ function searchRZP(scramble, eos, maxDepth, niss, maxNum, specialRZPTypes = []) 
                      specialRZPTypes.includes("8e8c") && cube.drBadEdge(axis)==8 && cube.drBadCorner(axis)==8 ||
                      specialRZPTypes.includes("4e7c") && cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==7 ||
                      specialRZPTypes.includes("6e3c") && cube.drBadEdge(axis)==6 && cube.drBadCorner(axis)==3 ||
-                     specialRZPTypes.includes("4e5c") && cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==5 ||
-                     specialRZPTypes.includes("4e6c") && cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==6)) {
+                     (specialRZPTypes.includes("4e5c_1") || specialRZPTypes.includes("4e5c_2") ||
+                      specialRZPTypes.includes("4e5c_3") || specialRZPTypes.includes("4e5c_4")) &&
+                     cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==5 ||
+                     (specialRZPTypes.includes("4e6c_1") || specialRZPTypes.includes("4e6c_2")) &&
+                     cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==6)) {
                         const rzp = !rev ?
                             new RZP(scramble, eo, axis, normal, reverse(inverse), false) :
                             new RZP(scramble, eo, axis, reverse(inverse), normal, false);
