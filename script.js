@@ -48,6 +48,7 @@ const elEODepth = document.getElementById("eo_depth");
 const elEODepthNum = document.getElementById("eo_depth_num");
 const elEONumber = document.getElementById("eo_number");
 const elEONumberNum = document.getElementById("eo_number_num");
+const elEONumberDepths = document.getElementById("eo_number_depths");
 const elEOHiddenNum = document.getElementById("eo_hidden_num");
 const elRZPDepth = document.getElementById("rzp_depth");
 const elRZPDepthNum = document.getElementById("rzp_depth_num");
@@ -595,6 +596,7 @@ function search() {
 
     elEODepth.style.display = "none";
     elEONumber.style.display = "none";
+    elEONumberDepths.textContent = "";
     elRZPDepth.style.display = "none";
     elRZPNumber.style.display = "none";
     elDRDepth.style.display = "none";
@@ -607,6 +609,7 @@ function search() {
     while (elBestPerEORZPList.firstChild) elBestPerEORZPList.removeChild(elBestPerEORZPList.lastChild);
 
     let eoNumber = 0;
+    let eoNumberByDepth = new Map();
     let eoHiddenNumber = 0;
     let eoMinMovesNormal = new Map();
     let eoMinMovesInverse = new Map();
@@ -724,6 +727,12 @@ function search() {
             elEONumberNum.textContent = ""+eoNumber;
 
             const eo = data.eo;
+
+            eoNumberByDepth.set(eo.moves, (eoNumberByDepth.get(eo.moves)||0)+1);
+            elEONumberDepths.textContent = [...eoNumberByDepth.entries()]
+                .sort((a, b) => a[0]-b[0])
+                .map(([depth, count]) => `${depth}: ${count}`)
+                .join(", ");
 
             const isNissEO = eo.normal.length > 0 && eo.inverse.length > 0;
             const isInverseOnly = eo.normal.length == 0;
