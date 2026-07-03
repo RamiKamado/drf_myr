@@ -1848,7 +1848,7 @@ function checkTriggerWindow(win, spec, isValidTrig, isLastAxisQT, classifyMiddle
     return spec.sameAxis ? T1[0] == T2[0] : T1[0] != T2[0];
 }
 
-function searchDR(scramble, rzps, maxDepth, niss, maxNum, maxFinishDepth, restrictTriggerForm = false) {
+function searchDR(scramble, rzps, maxDepth, niss, maxNum, maxFinishDepth, restrictTriggerForm = false, drCases = null) {
     const scrambleTable = Cube.makeTable(scramble);
     const inverseTable = Cube.makeTable(reverse(scramble));
 
@@ -1969,6 +1969,9 @@ function searchDR(scramble, rzps, maxDepth, niss, maxNum, maxFinishDepth, restri
                 const dr = !rev ?
                     new DR(scramble, rzp, normal, reverse(inverse)) :
                     new DR(scramble, rzp, reverse(inverse), normal);
+                if (drCases && !drCases.includes(dr.htrSubset)) {
+                    return;
+                }
                 postMessage({
                     type: "dr",
                     dr: dr,
@@ -2515,7 +2518,7 @@ onmessage = e => {
             }
         }
     }
-    searchDR(data.scramble, rzps, data.DRMaxDepth, data.DRNiss, data.DRMaxNumber, data.finishMaxDepth, data.RestrictTriggerForm);
+    searchDR(data.scramble, rzps, data.DRMaxDepth, data.DRNiss, data.DRMaxNumber, data.finishMaxDepth, data.RestrictTriggerForm, data.DRCases);
 
     postMessage({
         type: "end",

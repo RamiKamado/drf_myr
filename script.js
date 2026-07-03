@@ -31,6 +31,11 @@ const elDRMaxNumber = document.getElementById("dr_max_number");
 const elDRNiss = document.getElementById("dr_niss");
 const elRestrictTriggerForm = document.getElementById("restrict_trigger_form");
 const elHideRedundantEO = document.getElementById("hide_redundant_eo");
+const DR_CASES = ["0c0", "0c3", "0c4", "4a1", "4a2", "4a3", "4a4", "4b2", "4b3", "4b4", "4b5", "2c3", "2c4", "2c5"];
+const elDRCase = {};
+for (const c of DR_CASES) {
+    elDRCase[c] = document.getElementById("dr_case_"+c);
+}
 const elShowBestPerEO = document.getElementById("show_best_per_eo");
 const elShowBestPerEORZP = document.getElementById("show_best_per_eo_rzp");
 const elFinishMaxDepth = document.getElementById("finish_max_depth");
@@ -102,6 +107,7 @@ let config;
             dr_niss: "before",
             restrict_trigger_form: true,
             hide_redundant_eo: true,
+            dr_cases: DR_CASES.slice(),
             show_best_per_eo: false,
             show_best_per_eo_rzp: false,
             finish_max_depth: 16,
@@ -121,6 +127,9 @@ let config;
     }
     if (config.hide_redundant_eo === undefined) {
         config.hide_redundant_eo = false;
+    }
+    if (config.dr_cases === undefined) {
+        config.dr_cases = DR_CASES.slice();
     }
     if (config.show_best_per_eo === undefined) {
         config.show_best_per_eo = false;
@@ -191,6 +200,9 @@ elDRMaxNumber.value = ""+config.dr_max_number;
 elDRNiss.value = config.dr_niss;
 elRestrictTriggerForm.checked = config.restrict_trigger_form;
 elHideRedundantEO.checked = config.hide_redundant_eo;
+for (const c of DR_CASES) {
+    elDRCase[c].checked = config.dr_cases.includes(c);
+}
 elShowBestPerEO.checked = config.show_best_per_eo;
 elShowBestPerEORZP.checked = config.show_best_per_eo_rzp;
 
@@ -356,6 +368,7 @@ function search() {
     drNiss = elDRNiss.value,
     restrictTriggerForm = elRestrictTriggerForm.checked,
     hideRedundantEO = elHideRedundantEO.checked,
+    drCases = DR_CASES.filter(c => elDRCase[c].checked),
     showBestPerEO = elShowBestPerEO.checked,
     showBestPerEORZP = elShowBestPerEORZP.checked,
     finishMaxDepth = +elFinishMaxDepth.value,
@@ -375,6 +388,7 @@ function search() {
         dr_niss: drNiss,
         restrict_trigger_form: restrictTriggerForm,
         hide_redundant_eo: hideRedundantEO,
+        dr_cases: drCases,
         show_best_per_eo: showBestPerEO,
         show_best_per_eo_rzp: showBestPerEORZP,
         finish_max_depth: finishMaxDepth,
@@ -1151,6 +1165,7 @@ function search() {
         DRMaxDepth: drMaxDepth,
         DRMaxNumber: drMaxNumber,
         DRNiss: drNiss,
+        DRCases: drCases,
         RestrictTriggerForm: restrictTriggerForm,
         finishMaxDepth: finishMaxDepth,
     });
@@ -1170,6 +1185,7 @@ for (let e of [
     elDRNiss,
     elRestrictTriggerForm,
     elHideRedundantEO,
+    ...Object.values(elDRCase),
     elFinishMaxDepth,
     elInput,
 ]) {
@@ -1205,6 +1221,9 @@ elReset.addEventListener("click", () => {
     elDRNiss.value = "before";
     elRestrictTriggerForm.checked = true;
     elHideRedundantEO.checked = true;
+    for (const c of DR_CASES) {
+        elDRCase[c].checked = true;
+    }
     elShowBestPerEO.checked = false;
     elShowBestPerEORZP.checked = false;
     elFinishMaxDepth.value = "16";
