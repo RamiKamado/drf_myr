@@ -14,6 +14,17 @@ const SPECIAL_RZP_TYPES = [
     { id: "4e5c_4", drmClass: "4e5c", label: "4e5c: R F2 U' R" },
     { id: "4e6c_1", drmClass: "4e6c", label: "4e6c: R U D R" },
     { id: "4e6c_2", drmClass: "4e6c", label: "4e6c: R U' D R" },
+    { id: "4e3c_1",  drmClass: "4e3c", label: "4e3c: R U' F2 B2 L" },
+    { id: "4e3c_2",  drmClass: "4e3c", label: "4e3c: R U L D2 L" },
+    { id: "4e3c_3",  drmClass: "4e3c", label: "4e3c: R F2 B2 U' L" },
+    { id: "4e3c_4",  drmClass: "4e3c", label: "4e3c: R U L U2 R" },
+    { id: "4e3c_5",  drmClass: "4e3c", label: "4e3c: R U F2 D2 L" },
+    { id: "4e3c_6",  drmClass: "4e3c", label: "4e3c: R D' R U' R" },
+    { id: "4e3c_7",  drmClass: "4e3c", label: "4e3c: R F2 R D R" },
+    { id: "4e3c_8",  drmClass: "4e3c", label: "4e3c: R U F2 U2 R" },
+    { id: "4e3c_9",  drmClass: "4e3c", label: "4e3c: R U2 B2 U R" },
+    { id: "4e3c_10", drmClass: "4e3c", label: "4e3c: R U2 L U R" },
+    { id: "4e3c_11", drmClass: "4e3c", label: "4e3c: R' U' R' U' R" },
 ];
 // isSpecialRZP() でのバッジ/塗りつぶし判定に使う。チェックボックスID(サブバリエーション)ではなく
 // badEdge/badCorner分類(rzp.DRm)そのものの一覧。

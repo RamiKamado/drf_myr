@@ -1493,7 +1493,9 @@ function searchRZP(scramble, eos, maxDepth, niss, maxNum, specialRZPTypes = []) 
                       specialRZPTypes.includes("4e5c_3") || specialRZPTypes.includes("4e5c_4")) &&
                      cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==5 ||
                      (specialRZPTypes.includes("4e6c_1") || specialRZPTypes.includes("4e6c_2")) &&
-                     cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==6)) {
+                     cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==6 ||
+                     specialRZPTypes.some(t => t.startsWith("4e3c_")) &&
+                     cube.drBadEdge(axis)==4 && cube.drBadCorner(axis)==3)) {
                         const rzp = !rev ?
                             new RZP(scramble, eo, axis, normal, reverse(inverse), false) :
                             new RZP(scramble, eo, axis, reverse(inverse), normal, false);
