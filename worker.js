@@ -1085,18 +1085,21 @@ class EO {
         this.DRmFB = axis=="R/L" || axis=="U/D" ? `${cube.drBadEdge("F/B")}e${cube.drBadCorner("F/B")}c` : "";
         this.DRmRL = axis=="U/D" || axis=="F/B" ? `${cube.drBadEdge("R/L")}e${cube.drBadCorner("R/L")}c` : "";
 
-        // Bad edge数の変化(圧縮版: 値が変わった時点だけを記録)。
+        // Bad edge数の変化を記録する。
+        // EO軸自体のクォーターターン(例: F/B軸ならFまたはB)だけがbad edge数を変化させ得るため、
+        // そのクォーターターンの直後だけをチェックポイントとして記録する
+        // (値が変わったかどうかに関わらず記録する。他の軸の手やハーフターンは絶対に変化しないため記録しない)。
         // このクラス自身のEO判定と同じ順番 (reverse(inverse) -> scramble -> normal) で計算する。
         // (scramble -> normal -> reverse(inverse) の実行順では終端が0にならないため、この順番が必須)
-        // inverseが空の場合、reverse(inverse)適用直後(スクランブル前)の自明な0は表示上不要なので記録しない。
         {
+            const isAxisQT = m => (m[0]==axis[0] || m[0]==axis[2]) && m[m.length-1] != "2";
             const c2 = new Cube();
             const progression = [];
             for (let m of reverse(inverse)) {
                 c2.move(m);
-            }
-            if (inverse.length>0) {
-                progression.push(c2.eoBadEdge(axis));
+                if (isAxisQT(m)) {
+                    progression.push(c2.eoBadEdge(axis));
+                }
             }
             for (let m of scramble) {
                 c2.move(m);
@@ -1104,9 +1107,11 @@ class EO {
             progression.push(c2.eoBadEdge(axis));
             for (let m of normal) {
                 c2.move(m);
-                progression.push(c2.eoBadEdge(axis));
+                if (isAxisQT(m)) {
+                    progression.push(c2.eoBadEdge(axis));
+                }
             }
-            this.badEdgeProgression = progression.filter((v, i) => i==0 || v!=progression[i-1]);
+            this.badEdgeProgression = progression;
         }
     }
 
