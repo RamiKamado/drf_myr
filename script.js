@@ -94,6 +94,21 @@ const elRZPListDetails = document.getElementById("rzp_list_details");
 const elRZPListContent = document.getElementById("rzp_list_content");
 
 const configVersion = 1;
+const BAD_EDGE_COLORS = {
+    0: "#363636",
+    2: "#f5a623",
+    4: "#e53e3e",
+    6: "#38a169",
+    8: "#3182ce",
+    10: "#9b59b6",
+    12: "#7f8c8d",
+};
+function badEdgeProgressionHtml(progression) {
+    return progression.map(n => {
+        const color = BAD_EDGE_COLORS[n] || "#363636";
+        return `<span class="tag" style="background-color:${color};color:white;">${n} Bad</span>`;
+    }).join(" -> ");
+}
 // search()実行のたびに、その時点のdrGroups/drMinMovesByParentを閉じ込めた関数に差し替えられる。
 // チェックボックスのトグル(再検索なし)から呼び出せるようにモジュールスコープに置いている。
 let refreshShortestDRFilter = () => {};
@@ -801,6 +816,9 @@ function search() {
             eoHtml += ` (${eoInfoString(eo)})`;
             eoHtml += ` (<span class="has-text-weight-bold">${eo.moves}</span>`;
             eoHtml += `/<span class="has-text-weight-bold">${eo.moves}</span>)`;
+            if (eo.badEdgeProgression && eo.badEdgeProgression.length>0) {
+                eoHtml += ` ${badEdgeProgressionHtml(eo.badEdgeProgression)}`;
+            }
             if (hide) {
                 eoHiddenNumber++;
                 hiddenContainer.appendChild(ul);
