@@ -41,6 +41,7 @@ const elDRMaxDepth = document.getElementById("dr_max_depth");
 const elDRMaxNumber = document.getElementById("dr_max_number");
 const elDRNiss = document.getElementById("dr_niss");
 const elRestrictTriggerForm = document.getElementById("restrict_trigger_form");
+const elShowShortestDROnly = document.getElementById("show_shortest_dr_only");
 const elHideRedundantEO = document.getElementById("hide_redundant_eo");
 const DR_CASES = ["0c0", "0c3", "0c4", "4a1", "4a2", "4a3", "4a4", "4b2", "4b3", "4b4", "4b5", "2c3", "2c4", "2c5"];
 const elDRCase = {};
@@ -93,6 +94,9 @@ const elRZPListDetails = document.getElementById("rzp_list_details");
 const elRZPListContent = document.getElementById("rzp_list_content");
 
 const configVersion = 1;
+// search()実行のたびに、その時点のdrGroups/drMinMovesByParentを閉じ込めた関数に差し替えられる。
+// チェックボックスのトグル(再検索なし)から呼び出せるようにモジュールスコープに置いている。
+let refreshShortestDRFilter = () => {};
 
 let config;
 {
@@ -117,6 +121,7 @@ let config;
             dr_max_number: 256,
             dr_niss: "before",
             restrict_trigger_form: true,
+            show_shortest_dr_only: false,
             hide_redundant_eo: true,
             dr_cases: DR_CASES.slice(),
             show_best_per_eo: false,
@@ -135,6 +140,9 @@ let config;
     }
     if (config.restrict_trigger_form === undefined) {
         config.restrict_trigger_form = false;
+    }
+    if (config.show_shortest_dr_only === undefined) {
+        config.show_shortest_dr_only = false;
     }
     if (config.hide_redundant_eo === undefined) {
         config.hide_redundant_eo = false;
@@ -210,6 +218,7 @@ elDRMaxNumber.value = ""+config.dr_max_number;
 
 elDRNiss.value = config.dr_niss;
 elRestrictTriggerForm.checked = config.restrict_trigger_form;
+elShowShortestDROnly.checked = config.show_shortest_dr_only;
 elHideRedundantEO.checked = config.hide_redundant_eo;
 for (const c of DR_CASES) {
     elDRCase[c].checked = config.dr_cases.includes(c);
@@ -378,6 +387,7 @@ function search() {
     drMaxNumber = +elDRMaxNumber.value,
     drNiss = elDRNiss.value,
     restrictTriggerForm = elRestrictTriggerForm.checked,
+    showShortestDROnly = elShowShortestDROnly.checked,
     hideRedundantEO = elHideRedundantEO.checked,
     drCases = DR_CASES.filter(c => elDRCase[c].checked),
     showBestPerEO = elShowBestPerEO.checked,
@@ -398,6 +408,7 @@ function search() {
         dr_max_number: drMaxNumber,
         dr_niss: drNiss,
         restrict_trigger_form: restrictTriggerForm,
+        show_shortest_dr_only: showShortestDROnly,
         hide_redundant_eo: hideRedundantEO,
         dr_cases: drCases,
         show_best_per_eo: showBestPerEO,
@@ -651,6 +662,7 @@ function search() {
     let drUniqueNumber = 0;
     let drNumberSubsets = new Map();
     let drGroups = new Map();
+    let drMinMovesByParent = new Map();
     let drIdToEntry = new Map();
     let drFinishTotal = new Map();
     let best = 9999;
@@ -927,7 +939,7 @@ function search() {
                 elDRUniqueNum.textContent = ""+drUniqueNumber;
                 const li = createDRLi(dr);
                 parent.appendChild(li);
-                axisGroup.set(dr.htrSubset, { bestLi: li, bestN: n, bestDrId: dr.id, detailsLi: null, htrSubset: dr.htrSubset, hiddenBestTotal: Infinity });
+                axisGroup.set(dr.htrSubset, { bestLi: li, bestN: n, bestMoves: dr.moves, bestDrId: dr.id, detailsLi: null, htrSubset: dr.htrSubset, hiddenBestTotal: Infinity });
             } else {
                 const entry = axisGroup.get(dr.htrSubset);
                 const newLi = createDRLi(dr);
@@ -961,6 +973,7 @@ function search() {
                     popupUl.insertBefore(entry.bestLi, popupUl.firstChild);
                     entry.detailsLi.parentElement.insertBefore(newLi, entry.detailsLi);
                     entry.bestN = n;
+                    entry.bestMoves = dr.moves;
                     entry.bestLi = newLi;
                     entry.bestDrId = dr.id;
                 } else {
@@ -977,7 +990,30 @@ function search() {
                 const bestStr = entry.hiddenBestTotal < Infinity ? `, best: ${entry.hiddenBestTotal}` : "";
                 summary.textContent = `+${popupUl.children.length} more (${dr.htrSubset}${bestStr})`;
             }
+
+            if (!drMinMovesByParent.has(parentId) || dr.moves < drMinMovesByParent.get(parentId)) {
+                drMinMovesByParent.set(parentId, dr.moves);
+            }
+            applyShortestDRFilter(parentId);
         }
+
+        function applyShortestDRFilter(parentId) {
+            const parentGroups = drGroups.get(parentId);
+            if (!parentGroups) return;
+            const min = drMinMovesByParent.get(parentId);
+            const checked = elShowShortestDROnly.checked;
+            for (const axisGroup of parentGroups.values()) {
+                for (const entry of axisGroup.values()) {
+                    entry.bestLi.style.display = (checked && entry.bestMoves > min) ? "none" : "";
+                }
+            }
+        }
+
+        refreshShortestDRFilter = () => {
+            for (const parentId of drGroups.keys()) {
+                applyShortestDRFilter(parentId);
+            }
+        };
         function buildCleanedMoves(eo, rzp, dr, finish) {
             const moves = [];
             function add(m) {
@@ -1207,6 +1243,10 @@ elRZPUse.addEventListener("input", () => {
     elRZP.style.display = elRZPUse.checked?"block":"none";
 });
 
+elShowShortestDROnly.addEventListener("input", () => {
+    refreshShortestDRFilter();
+});
+
 elShowBestPerEO.addEventListener("input", () => {
     elBestPerEO.style.display = (elShowBestPerEO.checked && elBestPerEOList.children.length>0) ? "block" : "none";
 });
@@ -1231,6 +1271,7 @@ elReset.addEventListener("click", () => {
     elDRMaxNumber.value = "256";
     elDRNiss.value = "before";
     elRestrictTriggerForm.checked = true;
+    elShowShortestDROnly.checked = false;
     elHideRedundantEO.checked = true;
     for (const c of DR_CASES) {
         elDRCase[c].checked = true;
