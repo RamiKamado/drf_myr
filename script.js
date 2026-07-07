@@ -751,8 +751,8 @@ function search() {
             infos = [
                 rzp.axis,
                 `DR-${ecSwap(rzp.DRm)}`,
-                `AR-${ecSwap(rzp.ARmNormal)} (normal)`,
-                `AR-${ecSwap(rzp.ARmInverse)} (inverse)`,
+                `AR-${ecSwap(rzp.ARmNormal)} (normal) ${rzp.ARPairNormal}-pair`,
+                `AR-${ecSwap(rzp.ARmInverse)} (inverse) ${rzp.ARPairInverse}-pair`,
             ];
             return infos.join(", ");
         }
