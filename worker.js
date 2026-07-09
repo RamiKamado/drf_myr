@@ -294,39 +294,30 @@ ${C[15]}${C[16]}${C[17]}${C[24]}${C[25]}${C[26]}${C[33]}${C[34]}${C[35]}${C[42]}
     }
 
     // bad edgeとbad cornerが隣接している(ペアになっている)組み合わせの数を数える。
-    // arBadEdge/arBadCornerと同じ回転・同じスロットを使い、以下の隣接関係で判定する:
-    //   edge 1 (UB相当)  <-> corner 9 (LUB相当), corner 29 (RUB相当)
-    //   edge 7 (UF相当)  <-> corner 11 (LUF相当), corner 27 (RUF相当)
-    //   edge 46 (DF相当) <-> corner 17 (LDF相当), corner 33 (RDF相当)
-    //   edge 52 (DB相当) <-> corner 15 (LDB相当), corner 35 (RDB相当)
+    // DRM(drBadEdge/drBadCornerと同じ判定式・同じ単軸回転)を基準に、以下の隣接関係で判定する:
+    //   edge 1  (対象軸のUB相当) <-> corner 0 (ULB相当), corner 2 (URB相当)
+    //   edge 7  (対象軸のUF相当) <-> corner 6 (ULF相当), corner 8 (URF相当)
+    //   edge 46 (対象軸のDF相当) <-> corner 45(DLF相当), corner 47(DRF相当)
+    //   edge 52 (対象軸のDB相当) <-> corner 51(DLB相当), corner 53(DRB相当)
+    // ペア判定の対象となるエッジはU/D層12個のうちこの4個のみ(赤道エッジ、および
+    // 残り4個のU/D層エッジ(UL/UR/DL/DR相当)はDRMの総数には含まれるがペア判定の対象外)。
+    // コーナーは8個全てをDRM方式(対象軸を基準にした単軸回転、U/D面基準)で判定する。
     // 1つのbad edgeが両隣のcornerともbadな場合は2ペアとしてカウントする。
-    arPairCount(eoAxis, drAxis) {
-        const moves = {
-            "F/BU/D": [" ", " "],
-            "F/BR/L": ["z", " "],
-            "R/LF/B": ["y", "z"],
-            "R/LU/D": ["y", " "],
-            "U/DR/L": ["x", "z"],
-            "U/DF/B": ["x", " "],
-        }[eoAxis+drAxis];
-        this.move(moves[0]);
-        this.move(moves[1]);
+    arPairCount(axis) {
+        const rot = {"U/D": " ", "F/B": "x", "R/L": "z"}[axis];
+        this.move(rot);
 
-        const isBadCorner = c => this.C[c]==this.C[4] || this.C[c]==this.C[49];
+        const isBadCorner = c => this.C[c]!=this.C[4] && this.C[c]!=this.C[49];
         const isBadEdge = e => this.C[e]!=this.C[4] && this.C[e]!=this.C[49];
 
-        const groups = [
-            [1, 9, 29],
-            [7, 11, 27],
-            [46, 17, 33],
-            [52, 15, 35],
-        ];
+        const edgeToCorners = { 1: [0,2], 7: [6,8], 46: [45,47], 52: [51,53] };
 
         let n = 0;
-        for (let [e, c1, c2] of groups) {
+        for (let e of [1, 7, 46, 52]) {
             if (isBadEdge(e)) {
-                if (isBadCorner(c1)) n++;
-                if (isBadCorner(c2)) n++;
+                for (let c of edgeToCorners[e]) {
+                    if (isBadCorner(c)) n++;
+                }
             }
         }
 
@@ -1422,11 +1413,11 @@ class RZP {
 
         this.DRm = `${cube.drBadEdge(axis)}e${cube.drBadCorner(axis)}c`;
         this.ARmNormal = `${cube.arBadEdge(eo.axis, axis)}e${cube.arBadCorner(eo.axis, axis)}c`;
-        this.ARPairNormal = cube.arPairCount(eo.axis, axis);
+        this.ARPairNormal = cube.arPairCount(axis);
         for (let a of ["U/D", "F/B", "R/L"]) {
             if (a!=eo.axis && a!=axis) {
                 this.ARmInverse = `${cube.arBadEdge(eo.axis, a)}e${cube.arBadCorner(eo.axis, a)}c`;
-                this.ARPairInverse = cube.arPairCount(eo.axis, a);
+                this.ARPairInverse = cube.arPairCount(a);
             }
         }
     }
