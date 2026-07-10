@@ -242,6 +242,42 @@ ${C[15]}${C[16]}${C[17]}${C[24]}${C[25]}${C[26]}${C[33]}${C[34]}${C[35]}${C[42]}
         return n;
     }
 
+    // axis のDRについて、bad edgeとbad cornerの位置関係(隣接関係)から作られるペア数を数える。
+    // U/D面のDRを作る場合、bad edgeが取り得る位置は UF, UL, UB, UR, DF, DL, DB, DR の8箇所、
+    // bad cornerが取り得る位置+方向は FUR, RFU, FUL, LFU, BUL, LBU, BUR, RBU,
+    //                               FDR, RFD, FDL, LFD, BDL, LBD, BDR, RBD の16個であり、
+    // ペアとなる組み合わせは次の16通り(normal/inverseどちらにも同じ判定を用いる)。
+    //   UF-RFU, UF-LFU, UL-FUL, UL-BUL, UB-LBU, UB-RBU, UR-FUR, UR-BUR,
+    //   DF-RFD, DF-LFD, DL-FDL, DL-BDL, DB-LBD, DB-RBD, DR-FDR, DR-BDR
+    // F/B、R/L軸については、drBadEdge/drBadCornerと同じ回転(z/x)でU/D軸に正規化してから判定する。
+    drPairCount(axis) {
+        this.move({"U/D": " ", "F/B": "x", "R/L": "z"}[axis]);
+
+        const isBadEdge = e => this.C[e]!=this.C[4] && this.C[e]!=this.C[49];
+        const isBadCornerSticker = c => this.C[c]==this.C[4] || this.C[c]==this.C[49];
+
+        let n = 0;
+        for (let p of [
+            // [bad edge判定に使うステッカーindex, 隣接するbad cornerの方向判定に使うステッカーindex]
+            [ 7, 27], [ 7, 11],   // UF - RFU, UF - LFU
+            [ 3, 18], [ 3, 38],   // UL - FUL, UL - BUL
+            [ 1,  9], [ 1, 29],   // UB - LBU, UB - RBU
+            [ 5, 20], [ 5, 36],   // UR - FUR, UR - BUR
+            [46, 33], [46, 17],   // DF - RFD, DF - LFD
+            [48, 24], [48, 44],   // DL - FDL, DL - BDL
+            [52, 15], [52, 35],   // DB - LBD, DB - RBD
+            [50, 26], [50, 42],   // DR - FDR, DR - BDR
+        ]) {
+            if (isBadEdge(p[0]) && isBadCornerSticker(p[1])) {
+                n++;
+            }
+        }
+
+        this.undo();
+
+        return n;
+    }
+
     // https://shota-cube.hatenablog.com/entry/2024/06/18/170250
     arBadCorner(eoAxis, drAxis) {
         const moves = {
@@ -294,30 +330,36 @@ ${C[15]}${C[16]}${C[17]}${C[24]}${C[25]}${C[26]}${C[33]}${C[34]}${C[35]}${C[42]}
     }
 
     // bad edgeとbad cornerが隣接している(ペアになっている)組み合わせの数を数える。
-    // DRM(drBadEdge/drBadCornerと同じ判定式・同じ単軸回転)を基準に、以下の隣接関係で判定する:
-    //   edge 1  (対象軸のUB相当) <-> corner 0 (ULB相当), corner 2 (URB相当)
-    //   edge 7  (対象軸のUF相当) <-> corner 6 (ULF相当), corner 8 (URF相当)
-    //   edge 46 (対象軸のDF相当) <-> corner 45(DLF相当), corner 47(DRF相当)
-    //   edge 52 (対象軸のDB相当) <-> corner 51(DLB相当), corner 53(DRB相当)
-    // ペア判定の対象となるエッジはU/D層12個のうちこの4個のみ(赤道エッジ、および
-    // 残り4個のU/D層エッジ(UL/UR/DL/DR相当)はDRMの総数には含まれるがペア判定の対象外)。
-    // コーナーは8個全てをDRM方式(対象軸を基準にした単軸回転、U/D面基準)で判定する。
-    // 1つのbad edgeが両隣のcornerともbadな場合は2ペアとしてカウントする。
-    arPairCount(axis) {
-        const rot = {"U/D": " ", "F/B": "x", "R/L": "z"}[axis];
-        this.move(rot);
+    // arBadEdge/arBadCornerと全く同じ判定式・同じ回転・同じチェック対象インデックスを使う
+    // (表示されているAR-XeYcの値と対応関係を一致させるため)。
+    //   corner側はL/R面基準([9,11,15,17,27,29,33,35])、bad判定は == (arBadCornerと同じ)
+    //   edge側はU/D層4箇所([1,7,46,52])、bad判定は != (arBadEdgeと同じ)
+    // 各コーナーステッカーindexが、どのedge(4箇所のうちどれ)と隣接するかは以下の対応:
+    //   9,29  -> edge 1  (UB相当)
+    //   11,27 -> edge 7  (UF相当)
+    //   17,33 -> edge 46 (DF相当)
+    //   15,35 -> edge 52 (DB相当)
+    arPairCount(eoAxis, drAxis) {
+        const moves = {
+            "F/BU/D": [" ", " "],
+            "F/BR/L": ["z", " "],
+            "R/LF/B": ["y", "z"],
+            "R/LU/D": ["y", " "],
+            "U/DR/L": ["x", "z"],
+            "U/DF/B": ["x", " "],
+        }[eoAxis+drAxis];
+        this.move(moves[0]);
+        this.move(moves[1]);
 
-        const isBadCorner = c => this.C[c]!=this.C[4] && this.C[c]!=this.C[49];
+        const isBadCorner = c => this.C[c]==this.C[4] || this.C[c]==this.C[49];
         const isBadEdge = e => this.C[e]!=this.C[4] && this.C[e]!=this.C[49];
 
-        const edgeToCorners = { 1: [0,2], 7: [6,8], 46: [45,47], 52: [51,53] };
+        const cornerToEdge = { 9: 1, 29: 1, 11: 7, 27: 7, 17: 46, 33: 46, 15: 52, 35: 52 };
 
         let n = 0;
-        for (let e of [1, 7, 46, 52]) {
-            if (isBadEdge(e)) {
-                for (let c of edgeToCorners[e]) {
-                    if (isBadCorner(c)) n++;
-                }
+        for (let c of [9, 11, 15, 17, 27, 29, 33, 35]) {
+            if (isBadCorner(c) && isBadEdge(cornerToEdge[c])) {
+                n++;
             }
         }
 
@@ -1119,6 +1161,10 @@ class EO {
         this.DRmFB = axis=="R/L" || axis=="U/D" ? `${cube.drBadEdge("F/B")}e${cube.drBadCorner("F/B")}c` : "";
         this.DRmRL = axis=="U/D" || axis=="F/B" ? `${cube.drBadEdge("R/L")}e${cube.drBadCorner("R/L")}c` : "";
 
+        this.DRPairUD = this.DRmUD!="" ? cube.drPairCount("U/D") : undefined;
+        this.DRPairFB = this.DRmFB!="" ? cube.drPairCount("F/B") : undefined;
+        this.DRPairRL = this.DRmRL!="" ? cube.drPairCount("R/L") : undefined;
+
         // Bad edge数の変化を記録する。
         // EO軸自体のクォーターターン(例: F/B軸ならFまたはB)だけがbad edge数を変化させ得るため、
         // そのクォーターターンの直後だけをチェックポイントとして記録する
@@ -1153,13 +1199,13 @@ class EO {
         let s = movesString(this);
         s += `${s==""?"":" "}// EO (${this.axis} (`;
         if (this.DRmUD!="") {
-            s += `, DR-${this.DRmUD} (U/D)`;
+            s += `, DR-${this.DRmUD} (U/D) ${this.DRPairUD}-pair`;
         }
         if (this.DRmFB!="") {
-            s += `, DR-${this.DRmFB} (F/B)`;
+            s += `, DR-${this.DRmFB} (F/B) ${this.DRPairFB}-pair`;
         }
         if (this.DRmRL!="") {
-            s += `, DR-${this.DRmRL} (R/L)`;
+            s += `, DR-${this.DRmRL} (R/L) ${this.DRPairRL}-pair`;
         }
         s += `) (${this.moves}/${this.moves})`;
         return s;
@@ -1412,12 +1458,13 @@ class RZP {
         }
 
         this.DRm = `${cube.drBadEdge(axis)}e${cube.drBadCorner(axis)}c`;
+        this.DRPair = cube.drPairCount(axis);
         this.ARmNormal = `${cube.arBadEdge(eo.axis, axis)}e${cube.arBadCorner(eo.axis, axis)}c`;
-        this.ARPairNormal = cube.arPairCount(axis);
+        this.ARPairNormal = cube.arPairCount(eo.axis, axis);
         for (let a of ["U/D", "F/B", "R/L"]) {
             if (a!=eo.axis && a!=axis) {
                 this.ARmInverse = `${cube.arBadEdge(eo.axis, a)}e${cube.arBadCorner(eo.axis, a)}c`;
-                this.ARPairInverse = cube.arPairCount(a);
+                this.ARPairInverse = cube.arPairCount(eo.axis, a);
             }
         }
     }
@@ -1426,7 +1473,7 @@ class RZP {
         let s = movesString(this);
         const infos = [
             this.axis,
-            `DR-${this.DRm}`,
+            `DR-${this.DRm} ${this.DRPair}-pair`,
             `AR-${this.ARmNormal} (normal)`,
             `AR-${this.ARmInverse} (inverse)`,
         ];

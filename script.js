@@ -336,10 +336,17 @@ function probabilityBadgeColor(p) {
 
 function pairArmProbabilityHtml(drm, arm, pair) {
     const results = pairArmProbability(drm, arm, pair);
-    if (results.length==0) return "";
-    return " " + results.map(r => {
-        const color = probabilityBadgeColor(r.prob);
-        return `<span class="tag" style="background-color:${color};color:white;">${r.moves}-moves: ${r.prob.toFixed(1)}%</span>`;
+    const foundMoves = new Set(results.map(r => r.moves));
+    const allMoves = Object.keys(PAIR_ARM_RAW_DATA).map(Number).sort((a, b) => a-b);
+    if (allMoves.length==0) return "";
+    return " " + allMoves.map(moves => {
+        const found = results.find(r => r.moves==moves);
+        if (found) {
+            const color = probabilityBadgeColor(found.prob);
+            return `<span class="tag" style="background-color:${color};color:white;">${moves}-moves: ${found.prob.toFixed(1)}%</span>`;
+        } else {
+            return `<span class="tag" style="background-color:#bbbbbb;color:white;">${moves}-moves: no data</span>`;
+        }
     }).join(" ");
 }
 
@@ -986,13 +993,13 @@ function search() {
         function eoInfoString(eo) {
             infos = [eo.axis];
             if (eo.DRmUD) {
-                infos.push(`DR-${ecSwap(eo.DRmUD)} (U/D)`);
+                infos.push(`DR-${ecSwap(eo.DRmUD)} (U/D) ${eo.DRPairUD}-pair`);
             }
             if (eo.DRmFB) {
-                infos.push(`DR-${ecSwap(eo.DRmFB)} (F/B)`);
+                infos.push(`DR-${ecSwap(eo.DRmFB)} (F/B) ${eo.DRPairFB}-pair`);
             }
             if (eo.DRmRL) {
-                infos.push(`DR-${ecSwap(eo.DRmRL)} (R/L)`);
+                infos.push(`DR-${ecSwap(eo.DRmRL)} (R/L) ${eo.DRPairRL}-pair`);
             }
             return infos.join(", ");
         }
@@ -1000,7 +1007,7 @@ function search() {
         function rzpInfoString(rzp) {
             infos = [
                 rzp.axis,
-                `DR-${ecSwap(rzp.DRm)}`,
+                `DR-${ecSwap(rzp.DRm)} ${rzp.DRPair}-pair`,
                 `AR-${ecSwap(rzp.ARmNormal)} (normal) ${rzp.ARPairNormal}-pair${pairArmProbabilityHtml(rzp.DRm, rzp.ARmNormal, rzp.ARPairNormal)}`,
                 `AR-${ecSwap(rzp.ARmInverse)} (inverse) ${rzp.ARPairInverse}-pair${pairArmProbabilityHtml(rzp.DRm, rzp.ARmInverse, rzp.ARPairInverse)}`,
             ];
